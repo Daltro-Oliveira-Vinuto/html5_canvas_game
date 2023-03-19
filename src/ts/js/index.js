@@ -9,6 +9,7 @@ window.addEventListener("load", function () {
     function animate(timeStamp) {
         const deltaTime = timeStamp - lastTime;
         lastTime = timeStamp;
+        canvasContext.fillStyle = "lightblue";
         canvasContext.fillRect(0, 0, canvas.width, canvas.height);
         game.update(deltaTime);
         game.draw(canvasContext);
@@ -16,9 +17,38 @@ window.addEventListener("load", function () {
     }
     animate(0);
 });
+class GameInterface {
+    canvas;
+    width;
+    height;
+    player;
+    inputHandler;
+    ui;
+    enemies;
+    input;
+    ammo;
+    maxAmmo;
+    ammoTimer;
+    ammoInterval;
+    enemyTimer;
+    enemyInterval;
+    maxEnemies;
+    gameOver;
+    gameStarted;
+    backgroundAudio;
+    collisionAudio;
+    explosionAudio;
+    shootAudio;
+    playerLife;
+    score;
+    winningScore;
+    gameTime;
+    timeLimit;
+    speed = 1;
+}
 class Rectangle {
-    _x;
-    _y;
+    _x = 0;
+    _y = 0;
     _width;
     _height;
     speedX = 0;
@@ -33,6 +63,7 @@ class Rectangle {
     _markedForDeletion = false;
     game;
     _lives;
+    _score;
     constructor(game) {
         this.game = game;
     }
@@ -72,6 +103,12 @@ class Rectangle {
     set lives(lives) {
         this._lives = lives;
     }
+    get score() {
+        return this._score;
+    }
+    set score(score) {
+        this._score = score;
+    }
     generateRandomColor() {
         let color;
         var red = 0;
@@ -90,30 +127,9 @@ class Rectangle {
         return color;
     }
 }
-class Game {
-    canvas;
-    width;
-    height;
-    player;
-    inputHandler;
-    ui;
-    enemies;
-    input;
-    ammo;
-    maxAmmo;
-    ammoTimer;
-    ammoInterval;
-    enemyTimer;
-    enemyInterval;
-    maxEnemies;
-    gameOver;
-    gameStarted;
-    backgroundAudio;
-    collisionAudio;
-    explosionAudio;
-    shootAudio;
-    playerLife;
+class Game extends GameInterface {
     constructor(canvas) {
+        super();
         this.canvas = canvas;
         this.width = canvas.width;
         this.height = canvas.height;
@@ -131,6 +147,10 @@ class Game {
         this.maxEnemies = 20;
         this.gameOver = false;
         this.gameStarted = false;
+        this.score = 0;
+        this.winningScore = 5;
+        this.gameTime = 0;
+        this.timeLimit = 5000;
         this.backgroundAudio = document.getElementById("backgroundSound");
         this.collisionAudio = document.getElementById("collisionSound");
         this.explosionAudio = document.getElementById("explosionSound");
@@ -138,6 +158,12 @@ class Game {
         this.playerLife = 20;
     }
     update(deltaTime) {
+        if (!this.gameOver) {
+            this.gameTime += deltaTime;
+            if (this.gameTime > this.timeLimit) {
+                this.gameOver = true;
+            }
+        }
         // if player is marked for deletion than finish the game
         if (this.player.markedForDeletion) {
             window.location.reload();
@@ -176,8 +202,9 @@ class Game {
                 // decrease the live of the player
                 this.player.lives -= 1;
                 // if player don't have lives than remove player and game over
+                //if (this.player.lives <= 0) this.player.markedForDeletion = true;
                 if (this.player.lives <= 0)
-                    this.player.markedForDeletion = true;
+                    this.gameOver = true;
                 // play collision sound
                 this.collisionAudio.load();
                 this.collisionAudio.play();
@@ -191,8 +218,15 @@ class Game {
                     // decrease the lives of the enemy
                     enemy.lives--;
                     // if enemy don't have lives than mark him for deletion
-                    if (enemy.lives <= 0)
+                    if (enemy.lives <= 0) {
                         enemy.markedForDeletion = true;
+                        //increase player score;
+                        if (!this.gameOver)
+                            this.score += enemy.score;
+                        if (this.score > this.winningScore) {
+                            this.gameOver = true;
+                        }
+                    }
                     this.explosionAudio.load();
                     this.explosionAudio.play();
                 }
@@ -356,7 +390,8 @@ class Enemy extends Rectangle {
         this.width = 50;
         this.height = 50;
         this.color = this.generateRandomColor();
-        this.lives = 1;
+        this.lives = 2;
+        this.score = this.lives;
     }
     update(deltaTime) {
         this.x += this.speedX;
@@ -373,6 +408,9 @@ class Enemy extends Rectangle {
     draw(context) {
         context.save();
         context.drawImage(this.image, this.frameX * this.width, this.frameY * this.height, this.width, this.height, this.x, this.y, this.width, this.height);
+        context.fillStyle = "black";
+        context.font = "20px helvetica";
+        context.fillText(this.lives.toString(), this.x, this.y);
         context.restore();
     }
 }
@@ -416,22 +454,83 @@ class UI {
     fontFamily;
     constructor(game) {
         this.game = game;
-        this.color = "yellow";
+        this.color = "white";
         this.fontSize = 25;
         this.fontFamily = "Helvetica";
     }
     draw(context) {
         context.save();
+        context.shadowOffsetX = 2;
+        context.shadowOffsetY = 2;
+        context.shadowColor = "black";
+        // ammo
         context.fillStyle = this.color;
         for (let i = 0; i < this.game.ammo; i++) {
             context.fillRect(20 + i * 10, 50, 3, 20);
         }
+        //score
+        context.font = this.fontSize + "px " + this.fontFamily;
+        context.fillText("Score: " + this.game.score, 20, 40);
+        // timer
+        const formattedTime = (this.game.gameTime * 0.001).toFixed(1);
+        context.fillText("Timer: " + formattedTime, 20, 100);
+        // game over messages
+        if (this.game.gameOver) {
+            context.textAlign = "center";
+            let message1;
+            let message2;
+            if (this.game.score > this.game.winningScore) {
+                message1 = "you win";
+                message2 = "well done";
+            }
+            else {
+                message1 = "You lose";
+                message2 = "Try again next time";
+            }
+            context.font = "50px " + this.fontFamily;
+            context.fillText(message1, this.game.width * 0.5, this.game.height * 0.5 - 40);
+            context.font = "25px " + this.fontFamily;
+            context.fillText(message2, this.game.width * 0.5, this.game.height * 0.5 + 40);
+        }
         context.restore();
     }
 }
-class Layer {
+class Layer extends Rectangle {
+    speedModifier;
+    constructor(game, image, speedModifier) {
+        super(game);
+        this.image = image;
+        this.speedModifier = speedModifier;
+        this.width = 1768;
+        this.height = 500;
+    }
+    update(deltaTime) {
+        if (this.x <= -this.width)
+            this.x = 0;
+        else
+            this.x -= this.game.speed * this.speedModifier;
+    }
+    draw(context) {
+        context.drawImage(this.image, this.x, this.y);
+    }
 }
 class Background {
+    game;
+    image1;
+    layer1;
+    layers;
+    constructor(game) {
+        this.game = game;
+        this.image1 = document.getElementById("layer1");
+        this.layer1 = new Layer(this.game, this.image1, 1);
+        this.layers.push(this.layer1);
+    }
+    update(deltaTime) {
+        this.layers.forEach((layer) => layer.update(deltaTime));
+    }
+    draw(context) {
+        this.layers.forEach((layer) => layer.draw(context));
+    }
 }
 class Particle {
 }

@@ -14,6 +14,7 @@ window.addEventListener("load", function () {
     const deltaTime: number = timeStamp - lastTime;
 
     lastTime = timeStamp;
+    canvasContext.fillStyle = "lightblue";
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
     game.update(deltaTime);
     game.draw(canvasContext);
@@ -23,9 +24,46 @@ window.addEventListener("load", function () {
   animate(0);
 });
 
+class GameInterface {
+  public canvas: HTMLCanvasElement;
+  public width: number;
+  public height: number;
+  public player: Player;
+  public inputHandler: InputHandler;
+  public ui: UI;
+  public enemies: Enemy[];
+  public input: string[];
+
+  public ammo: number;
+  public maxAmmo: number;
+  public ammoTimer: number;
+  public ammoInterval: number;
+
+  public enemyTimer: number;
+  public enemyInterval: number;
+  public maxEnemies: number;
+
+  public gameOver: boolean;
+  public gameStarted: boolean;
+
+  public backgroundAudio: HTMLAudioElement;
+  public collisionAudio: HTMLAudioElement;
+  public explosionAudio: HTMLAudioElement;
+  public shootAudio: HTMLAudioElement;
+
+  public playerLife: number;
+
+  public score: number;
+  public winningScore: number;
+
+  public gameTime: number;
+  public timeLimit: number;
+  public speed: number = 1;
+}
+
 class Rectangle {
-  protected _x: number;
-  protected _y: number;
+  protected _x: number = 0;
+  protected _y: number = 0;
   protected _width: number;
   protected _height: number;
   protected speedX: number = 0;
@@ -43,6 +81,7 @@ class Rectangle {
   protected game: Game;
 
   protected _lives: number;
+  protected _score: number;
 
   public constructor(game: Game) {
     this.game = game;
@@ -96,6 +135,14 @@ class Rectangle {
     this._lives = lives;
   }
 
+  public get score(): number {
+    return this._score;
+  }
+
+  public set score(score: number) {
+    this._score = score;
+  }
+
   public generateRandomColor(): string {
     let color: string;
 
@@ -118,36 +165,9 @@ class Rectangle {
   }
 }
 
-class Game {
-  public canvas: HTMLCanvasElement;
-  public width: number;
-  public height: number;
-  public player: Player;
-  public inputHandler: InputHandler;
-  public ui: UI;
-  public enemies: Enemy[];
-  public input: string[];
-
-  public ammo: number;
-  public maxAmmo: number;
-  public ammoTimer: number;
-  public ammoInterval: number;
-
-  public enemyTimer: number;
-  public enemyInterval: number;
-  public maxEnemies: number;
-
-  public gameOver: boolean;
-  public gameStarted: boolean;
-
-  public backgroundAudio: HTMLAudioElement;
-  public collisionAudio: HTMLAudioElement;
-  public explosionAudio: HTMLAudioElement;
-  public shootAudio: HTMLAudioElement;
-
-  public playerLife: number;
-
+class Game extends GameInterface {
   public constructor(canvas: HTMLCanvasElement) {
+    super();
     this.canvas = canvas;
     this.width = canvas.width;
     this.height = canvas.height;
@@ -167,6 +187,12 @@ class Game {
     this.gameOver = false;
     this.gameStarted = false;
 
+    this.score = 0;
+    this.winningScore = 5;
+
+    this.gameTime = 0;
+    this.timeLimit = 5000;
+
     this.backgroundAudio = document.getElementById(
       "backgroundSound"
     ) as HTMLAudioElement;
@@ -185,6 +211,13 @@ class Game {
   }
 
   public update(deltaTime: number): void {
+    if (!this.gameOver) {
+      this.gameTime += deltaTime;
+      if (this.gameTime > this.timeLimit) {
+        this.gameOver = true;
+      }
+    }
+
     // if player is marked for deletion than finish the game
     if (this.player.markedForDeletion) {
       window.location.reload();
@@ -228,7 +261,8 @@ class Game {
         this.player.lives -= 1;
 
         // if player don't have lives than remove player and game over
-        if (this.player.lives <= 0) this.player.markedForDeletion = true;
+        //if (this.player.lives <= 0) this.player.markedForDeletion = true;
+        if (this.player.lives <= 0) this.gameOver = true;
 
         // play collision sound
         this.collisionAudio.load();
@@ -246,7 +280,16 @@ class Game {
           enemy.lives--;
 
           // if enemy don't have lives than mark him for deletion
-          if (enemy.lives <= 0) enemy.markedForDeletion = true;
+          if (enemy.lives <= 0) {
+            enemy.markedForDeletion = true;
+
+            //increase player score;
+            if (!this.gameOver) this.score += enemy.score;
+
+            if (this.score > this.winningScore) {
+              this.gameOver = true;
+            }
+          }
 
           this.explosionAudio.load();
           this.explosionAudio.play();
@@ -471,7 +514,8 @@ class Enemy extends Rectangle {
     this.width = 50;
     this.height = 50;
     this.color = this.generateRandomColor();
-    this.lives = 1;
+    this.lives = 2;
+    this.score = this.lives;
   }
 
   public update(deltaTime: number): void {
@@ -501,6 +545,10 @@ class Enemy extends Rectangle {
       this.width,
       this.height
     );
+
+    context.fillStyle = "black";
+    context.font = "20px helvetica";
+    context.fillText(this.lives.toString(), this.x, this.y);
 
     context.restore();
   }
@@ -553,7 +601,7 @@ class UI {
   public constructor(game: Game) {
     this.game = game;
 
-    this.color = "yellow";
+    this.color = "white";
     this.fontSize = 25;
     this.fontFamily = "Helvetica";
   }
@@ -561,17 +609,102 @@ class UI {
   public draw(context: CanvasRenderingContext2D) {
     context.save();
 
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowColor = "black";
+
+    // ammo
     context.fillStyle = this.color;
     for (let i = 0; i < this.game.ammo; i++) {
       context.fillRect(20 + i * 10, 50, 3, 20);
+    }
+
+    //score
+    context.font = this.fontSize + "px " + this.fontFamily;
+    context.fillText("Score: " + this.game.score, 20, 40);
+
+    // timer
+    const formattedTime: string = (this.game.gameTime * 0.001).toFixed(1);
+    context.fillText("Timer: " + formattedTime, 20, 100);
+
+    // game over messages
+    if (this.game.gameOver) {
+      context.textAlign = "center";
+      let message1: string;
+      let message2: string;
+
+      if (this.game.score > this.game.winningScore) {
+        message1 = "you win";
+        message2 = "well done";
+      } else {
+        message1 = "You lose";
+        message2 = "Try again next time";
+      }
+      context.font = "50px " + this.fontFamily;
+      context.fillText(
+        message1,
+        this.game.width * 0.5,
+        this.game.height * 0.5 - 40
+      );
+
+      context.font = "25px " + this.fontFamily;
+      context.fillText(
+        message2,
+        this.game.width * 0.5,
+        this.game.height * 0.5 + 40
+      );
     }
 
     context.restore();
   }
 }
 
-class Layer {}
+class Layer extends Rectangle {
+  protected speedModifier: number;
 
-class Background {}
+  public constructor(
+    game: Game,
+    image: CanvasImageSource,
+    speedModifier: number
+  ) {
+    super(game);
+    this.image = image;
+    this.speedModifier = speedModifier;
+    this.width = 1768;
+    this.height = 500;
+  }
+
+  public update(deltaTime: number): void {
+    if (this.x <= -this.width) this.x = 0;
+    else this.x -= this.game.speed * this.speedModifier;
+  }
+
+  public draw(context: CanvasRenderingContext2D): void {
+    context.drawImage(this.image, this.x, this.y);
+  }
+}
+
+class Background {
+  protected game: Game;
+  protected image1: CanvasImageSource;
+  protected layer1: Layer;
+  protected layers: Layer[];
+
+  public constructor(game: Game) {
+    this.game = game;
+    this.image1 = document.getElementById("layer1") as CanvasImageSource;
+    this.layer1 = new Layer(this.game, this.image1, 1);
+
+    this.layers.push(this.layer1);
+  }
+
+  public update(deltaTime: number): void {
+    this.layers.forEach((layer: Layer) => layer.update(deltaTime));
+  }
+
+  public draw(context: CanvasRenderingContext2D) {
+    this.layers.forEach((layer: Layer) => layer.draw(context));
+  }
+}
 
 class Particle {}
