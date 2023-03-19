@@ -1,7 +1,7 @@
 window.addEventListener("load", function () {
     const canvas = document.getElementById("gameArea");
-    canvas.width = 1500;
-    canvas.height = 900;
+    canvas.width = 1400;
+    canvas.height = 500;
     const canvasContext = canvas.getContext("2d");
     const game = new Game(canvas);
     // animation loop
@@ -152,7 +152,7 @@ class Game extends GameInterface {
         this.score = 0;
         this.winningScore = 10;
         this.gameTime = 0;
-        this.timeLimit = 5000;
+        this.timeLimit = 60000;
         this.backgroundAudio = document.getElementById("backgroundSound");
         this.collisionAudio = document.getElementById("collisionSound");
         this.explosionAudio = document.getElementById("explosionSound");
@@ -162,15 +162,12 @@ class Game extends GameInterface {
     update(deltaTime) {
         // update background
         this.background.update(deltaTime);
+        this.background.layer4.update(deltaTime);
         if (!this.gameOver) {
             this.gameTime += deltaTime;
             if (this.gameTime > this.timeLimit) {
                 this.gameOver = true;
             }
-        }
-        // if player is marked for deletion than finish the game
-        if (this.player.markedForDeletion) {
-            window.location.reload();
         }
         // update player
         this.player.update(deltaTime);
@@ -221,9 +218,15 @@ class Game extends GameInterface {
                     projectile.markedForDeletion = true;
                     // decrease the lives of the enemy
                     enemy.lives--;
+                    // play collision sound
+                    this.collisionAudio.load();
+                    this.collisionAudio.play();
                     // if enemy don't have lives than mark him for deletion
                     if (enemy.lives <= 0) {
                         enemy.markedForDeletion = true;
+                        // play explosion audio
+                        this.explosionAudio.load();
+                        this.explosionAudio.play();
                         //increase player score;
                         if (!this.gameOver)
                             this.score += enemy.score;
@@ -231,8 +234,6 @@ class Game extends GameInterface {
                             this.gameOver = true;
                         }
                     }
-                    this.explosionAudio.load();
-                    this.explosionAudio.play();
                 }
             });
             // remove the marked for deletion enemies
@@ -247,6 +248,8 @@ class Game extends GameInterface {
         this.enemies.forEach((enemy) => enemy.draw(context));
         // draw player
         this.player.draw(context);
+        // draw front layer
+        this.background.layer4.draw(context);
         // draw the UI
         this.ui.draw(context);
         context.restore();
@@ -507,19 +510,18 @@ class Layer extends Rectangle {
         super(game);
         this.image = image;
         this.speedModifier = speedModifier;
-        this.width = 1768;
-        this.height = 500;
+        this.width = this.game.width;
+        this.height = this.game.height;
         //this.height = this.game.height;
     }
     update(deltaTime) {
         if (this.x <= -this.width)
             this.x = 0;
-        else
-            this.x -= this.game.speed * this.speedModifier;
+        this.x -= this.game.speed * this.speedModifier;
     }
     draw(context) {
-        context.drawImage(this.image, this.x, this.y);
-        context.drawImage(this.image, this.x + this.game.width, this.y);
+        context.drawImage(this.image, this.x, this.y, this.width, this.height);
+        context.drawImage(this.image, this.x + this.width, this.y, this.width, this.height);
     }
 }
 class Background {
@@ -540,11 +542,11 @@ class Background {
         this.image3 = document.getElementById("layer3");
         this.image4 = document.getElementById("layer4");
         this.layer1 = new Layer(this.game, this.image1, 0.1);
-        this.layer2 = new Layer(this.game, this.image2, 1);
-        this.layer3 = new Layer(this.game, this.image3, 1.5);
-        this.layer4 = new Layer(this.game, this.image4, 2);
+        this.layer2 = new Layer(this.game, this.image2, 0.3);
+        this.layer3 = new Layer(this.game, this.image3, 1);
+        this.layer4 = new Layer(this.game, this.image4, 1.5);
         this.layers = [];
-        this.layers.push(this.layer1, this.layer2, this.layer3, this.layer4);
+        this.layers.push(this.layer1, this.layer2, this.layer3);
     }
     update(deltaTime) {
         this.layers.forEach((layer) => layer.update(deltaTime));
