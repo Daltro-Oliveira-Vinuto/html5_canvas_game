@@ -22,7 +22,6 @@ html {
   transform: translate(-50%, -50%);
 }
 
-#angler1,
 #playerImage,
 #explosionSound,
 #backgroundSound,
@@ -35,5 +34,20 @@ html {
 #layer2,
 #layer3,
 #layer4 {
+  display: none;
+}
+
+#angler1,
+#angler2,
+#drone,
+#hiveWhale,
+#lucky {
+  display: none;
+}
+
+#fireExplosion,
+#smokeExplosion,
+#gears,
+#projectile {
   display: none;
 }

@@ -60,6 +60,8 @@ class GameInterface {
   public gameTime: number;
   public timeLimit: number;
   public speed: number = 1;
+
+  public debugMode: boolean = false;
 }
 
 class Rectangle {
@@ -190,10 +192,10 @@ class Game extends GameInterface {
     this.gameStarted = false;
 
     this.score = 0;
-    this.winningScore = 10;
+    this.winningScore = 50;
 
     this.gameTime = 0;
-    this.timeLimit = 60000;
+    this.timeLimit = 600000;
 
     this.backgroundAudio = document.getElementById(
       "backgroundSound"
@@ -240,7 +242,9 @@ class Game extends GameInterface {
     // add a new enemie of type angler1 per second
     if (this.enemyTimer > this.enemyInterval && !this.gameOver) {
       if (this.enemies.length < this.maxEnemies) {
-        this.addEnemy("angler1");
+        let enemyType: string = this.chooseEnemyType();
+
+        this.addEnemy(enemyType);
         this.enemyTimer = 0;
       }
     } else {
@@ -333,7 +337,13 @@ class Game extends GameInterface {
 
   public addEnemy(enemyType: string): void {
     if (enemyType === "angler1") {
-      this.enemies.push(new Angler(this));
+      this.enemies.push(new Angler1(this));
+    } else if (enemyType == "angler2") {
+      this.enemies.push(new Angler2(this));
+    } else if (enemyType == "drone") {
+      this.enemies.push(new Drone(this));
+    } else if (enemyType == "hiveWhale") {
+      this.enemies.push(new Hivewhale(this));
     }
   }
 
@@ -373,6 +383,26 @@ class Game extends GameInterface {
     return (
       topLeftCorner || topRightCorner || bottomLeftCorner || bottomRightCorner
     );
+  }
+
+  private chooseEnemyType(): string {
+    let enemyType: string;
+    let randomNumber: number = Math.random() * 100;
+
+    if (randomNumber >= 0 && randomNumber <= 30) {
+      enemyType = "angler1";
+    }
+    if (randomNumber > 30 && randomNumber <= 60) {
+      enemyType = "angler2";
+    }
+    if (randomNumber > 60 && randomNumber <= 90) {
+      enemyType = "drone";
+    }
+    if (randomNumber > 90 && randomNumber <= 100) {
+      enemyType = "hiveWhale";
+    }
+
+    return enemyType;
   }
 }
 
@@ -453,6 +483,9 @@ class Player extends Rectangle {
     );
 
     // draw the player
+    if (this.game.debugMode) {
+      context.strokeRect(this.x, this.y, this.width, this.height);
+    }
     context.drawImage(
       this.image,
       this.frameX * this.width,
@@ -499,6 +532,8 @@ class InputHandler {
         this.game.input.push(event.key);
       } else if (event.key === " ") {
         this.game.player.shootTop();
+      } else if (event.key == "d") {
+        this.game.debugMode = !this.game.debugMode;
       }
 
       if (!this.game.gameStarted) {
@@ -559,15 +594,17 @@ class Enemy extends Rectangle {
       this.height
     );
 
-    context.fillStyle = "black";
-    context.font = "20px helvetica";
-    context.fillText(this.lives.toString(), this.x, this.y);
+    if (this.game.debugMode) {
+      context.strokeRect(this.x, this.y, this.width, this.height);
+      context.font = "20px helvetica";
+      context.fillText(this.lives.toString(), this.x, this.y);
+    }
 
     context.restore();
   }
 }
 
-class Angler extends Enemy {
+class Angler1 extends Enemy {
   public constructor(game: Game) {
     super(game);
     this.width = 228;
@@ -578,15 +615,63 @@ class Angler extends Enemy {
   }
 }
 
+class Angler2 extends Enemy {
+  public constructor(game: Game) {
+    super(game);
+    this.width = 213;
+    this.height = 169;
+    this.image = document.getElementById("angler2") as CanvasImageSource;
+    this.maxFrame = 37;
+    this.lives = 3;
+  }
+}
+
+class Drone extends Enemy {
+  public constructor(game: Game) {
+    super(game);
+    this.width = 115;
+    this.height = 95;
+    this.image = document.getElementById("drone") as CanvasImageSource;
+    this.maxFrame = 37;
+    this.lives = 4;
+  }
+}
+
+class Lucky extends Enemy {
+  public constructor(game: Game) {
+    super(game);
+    this.width = 99;
+    this.height = 95;
+    this.image = document.getElementById("drone") as CanvasImageSource;
+    this.maxFrame = 37;
+    this.lives = 2;
+  }
+}
+
+class Hivewhale extends Enemy {
+  public constructor(game: Game) {
+    super(game);
+    this.width = 400;
+    this.height = 227;
+    this.image = document.getElementById("hiveWhale") as CanvasImageSource;
+    this.maxFrame = 37;
+    this.lives = 6;
+  }
+}
+
 class Projectile extends Rectangle {
   public constructor(game: Game, x: number, y: number) {
     super(game);
     this.x = x;
     this.y = y;
-    this.width = 20;
+    this.width = 28;
     this.height = 10;
     this.maxSpeedX = 5;
     this.speedX = this.maxSpeedX;
+
+    this.maxFrame = 10;
+
+    this.image = document.getElementById("projectile") as CanvasImageSource;
   }
 
   public update(deltaTime: number): void {
@@ -595,12 +680,40 @@ class Projectile extends Rectangle {
     if (this.x > this.game.width * 0.9) {
       this.markedForDeletion = true;
     }
+
+    if (this.frameX < this.maxFrame) {
+      this.frameX++;
+    } else {
+      this.frameX = 0;
+      this.frameY += 1;
+    }
+
+    if (this.frameY >= 8) {
+      this.frameY = 0;
+    }
   }
 
   public draw(context: CanvasRenderingContext2D) {
     context.save();
-    context.fillStyle = "#ff0000";
-    context.fillRect(this.x, this.y, this.width, this.height);
+
+    if (this.game.debugMode) {
+      context.strokeRect(this.x, this.y, this.width, this.height);
+    }
+
+    /* context.drawImage(
+      this.image,
+      this.frameX * this.width,
+      this.frameY * this.height,
+      this.width,
+      this.height,
+      this.x,
+      this.y,
+      this.width,
+      this.height
+    );
+    */
+    context.drawImage(this.image, this.x, this.y, this.width, this.height);
+
     context.restore();
   }
 }
