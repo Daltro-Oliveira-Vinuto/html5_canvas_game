@@ -1,0 +1,32 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: 0;
+}
+
+body,
+html {
+  width: 100%;
+  height: 100%;
+  background-color: lightgrey;
+}
+
+#gameArea {
+  border: 5px solid black;
+  max-width: 99%;
+  max-height: 100%;
+  background-color: #4d79bc;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+#angler1,
+#playerImage,
+#explosionSound,
+#backgroundSound,
+#shootSound,
+#collisionSound {
+  display: none;
+}

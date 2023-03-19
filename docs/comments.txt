@@ -1,0 +1,35 @@
+⭐️ Contents ⭐️
+⌨️ (0:00:00) Intro
+⌨️ (0:01:07) HTML & CSS setup
+⌨️ (0:02:40) Basic JavaScript setup
+⌨️ (0:04:59) Object Oriented programming with JavaScript
+⌨️ (0:07:25) Creating Player and Game objects
+⌨️ (0:13:18) Animation loop
+⌨️ (0:16:36) Keyboard inputs
+⌨️ (0:26:15) Creating projectiles
+⌨️ (0:33:22) Periodic events
+⌨️ (0:38:30) Drawing game UI
+⌨️ (0:41:20) Base enemy class
+⌨️ (0:49:19) Collision detection between rectangles
+⌨️ (0:54:36) Drawing game score
+⌨️ (0:57:49) Win and lose condition
+⌨️ (0:59:52) Counting game time
+⌨️ (1:03:07) Animated parallax backgrounds
+⌨️ (1:13:20) Sprite animation with JavaScript
+⌨️ (1:17:02) Creating a debug mode
+⌨️ (1:18:38) Animating enemy sprite sheets
+⌨️ (1:25:15) Night Angler enemy class
+⌨️ (1:27:39) Lucky Fish enemy class
+⌨️ (1:29:02) Collecting power ups
+⌨️ (1:36:51) Drawing projectiles as images
+⌨️ (1:38:01) Custom fonts and game text
+⌨️ (1:40:43) Cleaning up
+⌨️ (1:42:51) Particle effects and physics
+⌨️ (1:55:03) Particle rotation
+⌨️ (1:58:47) Tweaks and fixes
+⌨️ (2:01:46) Hive Whale enemy class
+⌨️ (2:04:46) Drone enemy class
+⌨️ (2:09:30) Dust effect animation
+⌨️ (2:24:36) Fire effect animation
+⌨️ (2:26:03) Tuning game difficulty
+⌨️ (2:29:26) What to do next?

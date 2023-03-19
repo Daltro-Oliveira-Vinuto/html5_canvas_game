@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+
+<htlm lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Javascript Game</title>
+    <!-- icon -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+
+  <body>
+    <!-- canvas region -->
+    <canvas id="gameArea"></canvas>
+
+    <!-- assets  -->
+
+    <!-- player image -->
+    <img src="../assets/images/player.png" id="playerImage" />
+
+    <!-- enemy Angler1  -->
+
+    <img src="../assets/images/angler1.png" id="angler1" />
+
+    <!-- Sounds -->
+    <audio id="explosionSound" no-controls>
+      <source src="../assets/sounds/explosion-91872.mp3" type=""audio/mpeg">
+      Your browse does not support audio element
+    </audio>
+
+    <audio id="backgroundSound" no-controls>
+      <source src="../assets/sounds/happy-14585.mp3" type=""audio/mpeg" > Your
+      browse does not suppor audio element
+    </audio>
+
+    <audio id="shootSound" controls>
+      <source src="../assets/sounds/laser-gun-81720.mp3" type=""audio/mpeg">
+      Your browse does not support the audio element
+    </audio>
+
+    <audio id="collisionSound" controls>
+      <source
+        src="../assets/sounds/ani-big-pipe-hit-6814.mp3"
+        type="audio/mpeg"
+      />
+      Your browse does not support audio element
+    </audio>
+
+    <!-- main javascript script -->
+    <script type="text/javascript" src="ts/js/index.js"></script>
+  </body>
+</htlm>
