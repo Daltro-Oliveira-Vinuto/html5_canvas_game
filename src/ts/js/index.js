@@ -23,6 +23,7 @@ class GameInterface {
     height;
     player;
     inputHandler;
+    background;
     ui;
     enemies;
     input;
@@ -135,6 +136,7 @@ class Game extends GameInterface {
         this.height = canvas.height;
         this.player = new Player(this);
         this.inputHandler = new InputHandler(this);
+        this.background = new Background(this);
         this.ui = new UI(this);
         this.enemies = [];
         this.input = [];
@@ -148,7 +150,7 @@ class Game extends GameInterface {
         this.gameOver = false;
         this.gameStarted = false;
         this.score = 0;
-        this.winningScore = 5;
+        this.winningScore = 10;
         this.gameTime = 0;
         this.timeLimit = 5000;
         this.backgroundAudio = document.getElementById("backgroundSound");
@@ -158,6 +160,8 @@ class Game extends GameInterface {
         this.playerLife = 20;
     }
     update(deltaTime) {
+        // update background
+        this.background.update(deltaTime);
         if (!this.gameOver) {
             this.gameTime += deltaTime;
             if (this.gameTime > this.timeLimit) {
@@ -237,6 +241,8 @@ class Game extends GameInterface {
     }
     draw(context) {
         context.save();
+        // draw background
+        this.background.draw(context);
         // draw enemies
         this.enemies.forEach((enemy) => enemy.draw(context));
         // draw player
@@ -291,7 +297,7 @@ class Player extends Rectangle {
         this.maxFrame = 35;
         this.projectiles = [];
         this.image = document.getElementById("playerImage");
-        this.lives = 5;
+        this.lives = 20;
     }
     update(deltaTime) {
         // handles motion of the player
@@ -503,6 +509,7 @@ class Layer extends Rectangle {
         this.speedModifier = speedModifier;
         this.width = 1768;
         this.height = 500;
+        //this.height = this.game.height;
     }
     update(deltaTime) {
         if (this.x <= -this.width)
@@ -512,18 +519,32 @@ class Layer extends Rectangle {
     }
     draw(context) {
         context.drawImage(this.image, this.x, this.y);
+        context.drawImage(this.image, this.x + this.game.width, this.y);
     }
 }
 class Background {
     game;
     image1;
+    image2;
+    image3;
+    image4;
     layer1;
+    layer2;
+    layer3;
+    layer4;
     layers;
     constructor(game) {
         this.game = game;
         this.image1 = document.getElementById("layer1");
-        this.layer1 = new Layer(this.game, this.image1, 1);
-        this.layers.push(this.layer1);
+        this.image2 = document.getElementById("layer2");
+        this.image3 = document.getElementById("layer3");
+        this.image4 = document.getElementById("layer4");
+        this.layer1 = new Layer(this.game, this.image1, 0.1);
+        this.layer2 = new Layer(this.game, this.image2, 1);
+        this.layer3 = new Layer(this.game, this.image3, 1.5);
+        this.layer4 = new Layer(this.game, this.image4, 2);
+        this.layers = [];
+        this.layers.push(this.layer1, this.layer2, this.layer3, this.layer4);
     }
     update(deltaTime) {
         this.layers.forEach((layer) => layer.update(deltaTime));

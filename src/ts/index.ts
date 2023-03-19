@@ -30,6 +30,7 @@ class GameInterface {
   public height: number;
   public player: Player;
   public inputHandler: InputHandler;
+  public background: Background;
   public ui: UI;
   public enemies: Enemy[];
   public input: string[];
@@ -173,6 +174,7 @@ class Game extends GameInterface {
     this.height = canvas.height;
     this.player = new Player(this);
     this.inputHandler = new InputHandler(this);
+    this.background = new Background(this);
     this.ui = new UI(this);
     this.enemies = [];
     this.input = [];
@@ -188,7 +190,7 @@ class Game extends GameInterface {
     this.gameStarted = false;
 
     this.score = 0;
-    this.winningScore = 5;
+    this.winningScore = 10;
 
     this.gameTime = 0;
     this.timeLimit = 5000;
@@ -211,6 +213,9 @@ class Game extends GameInterface {
   }
 
   public update(deltaTime: number): void {
+    // update background
+    this.background.update(deltaTime);
+
     if (!this.gameOver) {
       this.gameTime += deltaTime;
       if (this.gameTime > this.timeLimit) {
@@ -306,6 +311,9 @@ class Game extends GameInterface {
   public draw(context: CanvasRenderingContext2D): void {
     context.save();
 
+    // draw background
+    this.background.draw(context);
+
     // draw enemies
     this.enemies.forEach((enemy: Enemy) => enemy.draw(context));
 
@@ -380,7 +388,7 @@ class Player extends Rectangle {
 
     this.image = document.getElementById("playerImage") as CanvasImageSource;
 
-    this.lives = 5;
+    this.lives = 20;
   }
 
   public update(deltaTime: number): void {
@@ -672,6 +680,7 @@ class Layer extends Rectangle {
     this.speedModifier = speedModifier;
     this.width = 1768;
     this.height = 500;
+    //this.height = this.game.height;
   }
 
   public update(deltaTime: number): void {
@@ -681,21 +690,38 @@ class Layer extends Rectangle {
 
   public draw(context: CanvasRenderingContext2D): void {
     context.drawImage(this.image, this.x, this.y);
+    context.drawImage(this.image, this.x+this.game.width, this.y);
   }
 }
 
 class Background {
   protected game: Game;
   protected image1: CanvasImageSource;
+  protected image2: CanvasImageSource;
+  protected image3: CanvasImageSource;
+  protected image4: CanvasImageSource;
+
   protected layer1: Layer;
+  protected layer2: Layer;
+  protected layer3: Layer;
+  protected layer4: Layer;
   protected layers: Layer[];
 
   public constructor(game: Game) {
     this.game = game;
     this.image1 = document.getElementById("layer1") as CanvasImageSource;
-    this.layer1 = new Layer(this.game, this.image1, 1);
+    this.image2 = document.getElementById("layer2") as CanvasImageSource;
+    this.image3 = document.getElementById("layer3") as CanvasImageSource;
+    this.image4 = document.getElementById("layer4") as CanvasImageSource;
 
-    this.layers.push(this.layer1);
+    this.layer1 = new Layer(this.game, this.image1, 0.1);
+    this.layer2 = new Layer(this.game, this.image2, 1);
+    this.layer3 = new Layer(this.game, this.image3, 1.5);
+    this.layer4 = new Layer(this.game, this.image4, 2);
+
+    this.layers = [];
+
+    this.layers.push(this.layer1, this.layer2, this.layer3, this.layer4);
   }
 
   public update(deltaTime: number): void {
