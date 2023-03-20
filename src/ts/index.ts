@@ -33,6 +33,7 @@ class GameInterface {
   public background: Background;
   public ui: UI;
   public enemies: Enemy[];
+  public particles: Particle[];
   public input: string[];
 
   public ammo: number;
@@ -178,6 +179,7 @@ class Game extends GameInterface {
     this.inputHandler = new InputHandler(this);
     this.background = new Background(this);
     this.ui = new UI(this);
+    this.particles = [];
     this.enemies = [];
     this.input = [];
     this.ammo = 20;
@@ -308,6 +310,11 @@ class Game extends GameInterface {
             if (this.score > this.winningScore) {
               this.gameOver = true;
             }
+
+            // add particles at the place of the collision between the particle and enemy
+            for (let i = 0; i < enemy.score; i++) {
+              this.particles.push(new Particle(this, enemy.x, enemy.y));
+            }
           }
         }
       });
@@ -317,6 +324,14 @@ class Game extends GameInterface {
         (enemy: Enemy) => !enemy.markedForDeletion
       );
     });
+
+    // update particles
+    this.particles.forEach((particle: Particle) => particle.update(deltaTime));
+
+    // remove the particles marked for deletion
+    this.particles = this.particles.filter(
+      (particle: Particle) => !particle.markedForDeletion
+    );
   }
 
   public draw(context: CanvasRenderingContext2D): void {
@@ -327,6 +342,9 @@ class Game extends GameInterface {
 
     // draw enemies
     this.enemies.forEach((enemy: Enemy) => enemy.draw(context));
+
+    // draw particles
+    this.particles.forEach((particle: Particle) => particle.draw(context));
 
     // draw player
     this.player.draw(context);
@@ -978,8 +996,8 @@ class Particle extends Rectangle {
   public draw(context: CanvasRenderingContext2D): void {
     context.drawImage(
       this.image,
-      this.frameX * this.size,
-      this.frameY * this.size,
+      this.frameX * this.spriteSize,
+      this.frameY * this.spriteSize,
       this.size,
       this.size,
       this.x,

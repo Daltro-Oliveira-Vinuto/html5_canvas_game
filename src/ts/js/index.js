@@ -26,6 +26,7 @@ class GameInterface {
     background;
     ui;
     enemies;
+    particles;
     input;
     ammo;
     maxAmmo;
@@ -139,6 +140,7 @@ class Game extends GameInterface {
         this.inputHandler = new InputHandler(this);
         this.background = new Background(this);
         this.ui = new UI(this);
+        this.particles = [];
         this.enemies = [];
         this.input = [];
         this.ammo = 20;
@@ -239,12 +241,20 @@ class Game extends GameInterface {
                         if (this.score > this.winningScore) {
                             this.gameOver = true;
                         }
+                        // add particles at the place of the collision between the particle and enemy
+                        for (let i = 0; i < enemy.score; i++) {
+                            this.particles.push(new Particle(this, enemy.x, enemy.y));
+                        }
                     }
                 }
             });
             // remove the marked for deletion enemies
             this.enemies = this.enemies.filter((enemy) => !enemy.markedForDeletion);
         });
+        // update particles
+        this.particles.forEach((particle) => particle.update(deltaTime));
+        // remove the particles marked for deletion
+        this.particles = this.particles.filter((particle) => !particle.markedForDeletion);
     }
     draw(context) {
         context.save();
@@ -252,6 +262,8 @@ class Game extends GameInterface {
         this.background.draw(context);
         // draw enemies
         this.enemies.forEach((enemy) => enemy.draw(context));
+        // draw particles
+        this.particles.forEach((particle) => particle.draw(context));
         // draw player
         this.player.draw(context);
         // draw front layer
@@ -757,7 +769,7 @@ class Particle extends Rectangle {
         }
     }
     draw(context) {
-        context.drawImage(this.image, this.frameX * this.size, this.frameY * this.size, this.size, this.size, this.x, this.y, this.size, this.size);
+        context.drawImage(this.image, this.frameX * this.spriteSize, this.frameY * this.spriteSize, this.size, this.size, this.x, this.y, this.size, this.size);
     }
 }
 //# sourceMappingURL=index.js.map
