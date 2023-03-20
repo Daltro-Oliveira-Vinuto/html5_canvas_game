@@ -153,7 +153,7 @@ class Game extends GameInterface {
         this.gameOver = false;
         this.gameStarted = false;
         this.score = 0;
-        this.winningScore = 10;
+        this.winningScore = 100;
         this.gameTime = 0;
         this.timeLimit = 600000;
         this.speed = 1;
@@ -217,6 +217,10 @@ class Game extends GameInterface {
                 if (enemy.type === "lucky") {
                     this.player.enterPowerUp();
                 }
+                // particles at the position of the collision
+                for (let i = 0; i < enemy.score / 2.0; i++) {
+                    this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
+                }
             }
             // verify if each projectile collided with some enemy
             this.player.projectiles.forEach((projectile) => {
@@ -243,7 +247,7 @@ class Game extends GameInterface {
                         }
                         // add particles at the place of the collision between the particle and enemy
                         for (let i = 0; i < enemy.score; i++) {
-                            this.particles.push(new Particle(this, enemy.x, enemy.y));
+                            this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
                         }
                     }
                 }
@@ -739,6 +743,8 @@ class Particle extends Rectangle {
     gravity;
     angle;
     va;
+    bounce;
+    bottomBounceBoundary;
     constructor(game, x, y) {
         super(game);
         this.x = x;
@@ -755,6 +761,8 @@ class Particle extends Rectangle {
         this.markedForDeletion = false;
         this.angle = 0;
         this.va = Math.random() * 0.2 - 0.1;
+        this.bounce = false;
+        this.bottomBounceBoundary = 100;
     }
     update(deltaTime) {
         this.angle += this.va;
@@ -767,9 +775,14 @@ class Particle extends Rectangle {
             this.x > this.width - this.size) {
             this.markedForDeletion = true;
         }
+        // make the particle bounce 
+        if (!this.bounce && this.y > this.game.height - this.bottomBounceBoundary) {
+            this.bounce = true;
+            this.speedY *= -0.5;
+        }
     }
     draw(context) {
-        context.drawImage(this.image, this.frameX * this.spriteSize, this.frameY * this.spriteSize, this.size, this.size, this.x, this.y, this.size, this.size);
+        context.drawImage(this.image, this.frameX * this.spriteSize, this.frameY * this.spriteSize, this.spriteSize, this.spriteSize, this.x, this.y, this.size, this.size);
     }
 }
 //# sourceMappingURL=index.js.map
