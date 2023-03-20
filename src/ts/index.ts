@@ -192,10 +192,12 @@ class Game extends GameInterface {
     this.gameStarted = false;
 
     this.score = 0;
-    this.winningScore = 50;
+    this.winningScore = 10;
 
     this.gameTime = 0;
     this.timeLimit = 600000;
+
+    this.speed = 1;
 
     this.backgroundAudio = document.getElementById(
       "backgroundSound"
@@ -239,12 +241,10 @@ class Game extends GameInterface {
       this.ammoTimer += deltaTime;
     }
 
-    // add a new enemie of type angler1 per second
+    // add a new enemie of random type each enemyInterval
     if (this.enemyTimer > this.enemyInterval && !this.gameOver) {
       if (this.enemies.length < this.maxEnemies) {
-        let enemyType: string = this.chooseEnemyType();
-
-        this.addEnemy(enemyType);
+        this.addEnemy();
         this.enemyTimer = 0;
       }
     } else {
@@ -255,7 +255,7 @@ class Game extends GameInterface {
     this.enemies.forEach((enemy: Enemy) => {
       enemy.update(deltaTime);
 
-      // check if some enemy collide with the player
+      // check if some enemy collided with the player
       let collided: boolean =
         this.checkCollisions(this.player, enemy) ||
         this.checkCollisions(enemy, this.player);
@@ -263,8 +263,8 @@ class Game extends GameInterface {
         // mark enemy for deletion
         enemy.markedForDeletion = true;
 
-        // decrease the live of the player
-        this.player.lives -= 1;
+        // decrease the score  of the player
+        this.player.score--;
 
         // if player don't have lives than remove player and game over
         //if (this.player.lives <= 0) this.player.markedForDeletion = true;
@@ -273,6 +273,11 @@ class Game extends GameInterface {
         // play collision sound
         this.collisionAudio.load();
         this.collisionAudio.play();
+
+        // verify if the enemy was a lucky, if true than active powerUp state
+        if (enemy.type === "lucky") {
+          this.player.enterPowerUp();
+        }
       }
 
       // verify if each projectile collided with some enemy
@@ -335,7 +340,9 @@ class Game extends GameInterface {
     context.restore();
   }
 
-  public addEnemy(enemyType: string): void {
+  public addEnemy(): void {
+    let enemyType: string = this.chooseEnemyType();
+
     if (enemyType === "angler1") {
       this.enemies.push(new Angler1(this));
     } else if (enemyType == "angler2") {
@@ -344,6 +351,8 @@ class Game extends GameInterface {
       this.enemies.push(new Drone(this));
     } else if (enemyType == "hiveWhale") {
       this.enemies.push(new Hivewhale(this));
+    } else if (enemyType == "lucky") {
+      this.enemies.push(new Lucky(this));
     }
   }
 
@@ -389,25 +398,35 @@ class Game extends GameInterface {
     let enemyType: string;
     let randomNumber: number = Math.random() * 100;
 
-    if (randomNumber >= 0 && randomNumber <= 30) {
+    if (randomNumber >= 0 && randomNumber <= 20) {
       enemyType = "angler1";
     }
-    if (randomNumber > 30 && randomNumber <= 60) {
+    if (randomNumber > 20 && randomNumber <= 40) {
       enemyType = "angler2";
     }
-    if (randomNumber > 60 && randomNumber <= 90) {
+
+    if (randomNumber > 40 && randomNumber < 60) {
       enemyType = "drone";
     }
-    if (randomNumber > 90 && randomNumber <= 100) {
+
+    if (randomNumber > 50 && randomNumber <= 95) {
+      enemyType = "lucky";
+    }
+    if (randomNumber > 95 && randomNumber <= 100) {
       enemyType = "hiveWhale";
     }
 
+    console.log(enemyType);
+    console.log(this.enemies);
     return enemyType;
   }
 }
 
 class Player extends Rectangle {
   public projectiles: Projectile[];
+  public powerUp: boolean;
+  protected powerUpTimer = 0;
+  protected powerUpLimit = 10000;
 
   public constructor(game: Game) {
     super(game);
@@ -424,6 +443,10 @@ class Player extends Rectangle {
     this.image = document.getElementById("playerImage") as CanvasImageSource;
 
     this.lives = 20;
+
+    this.powerUp = false;
+    this.powerUpTimer = 0;
+    this.powerUpLimit = 10000;
   }
 
   public update(deltaTime: number): void {
@@ -468,10 +491,27 @@ class Player extends Rectangle {
     this.x += this.speedX;
 
     // stops the player from get out of the screen boundaries
-    if (this.y <= 0 || this.y + this.height >= this.game.height)
-      this.y -= this.speedY;
+    //if (this.y <= 0 || this.y + this.height >= this.game.height)
+    //  this.y -= this.speedY;
     if (this.x <= 0 || this.x + this.width >= this.game.width)
       this.x -= this.speedX;
+
+    if (this.y > this.game.height - this.height * 0.5)
+      this.y = this.game.height - this.height * 0.5;
+    if (this.y < -this.height * 0.5) this.y = -this.height * 0.5;
+
+    // check powerUp
+    if (this.powerUp) {
+      if (this.powerUpTimer > this.powerUpLimit) {
+        this.powerUp = false;
+        this.powerUpTimer = 0;
+        this.frameY = 0;
+      } else {
+        this.powerUpTimer += deltaTime;
+        this.frameY = 1;
+        this.game.ammo += 0.1;
+      }
+    }
   }
 
   public draw(context: CanvasRenderingContext2D): void {
@@ -504,13 +544,30 @@ class Player extends Rectangle {
   public shootTop(): void {
     if (this.game.ammo > 0) {
       this.projectiles.push(
-        new Projectile(this.game, this.x + this.width * 0.9, this.y + 30)
+        new Projectile(this.game, this.x + 80, this.y + 30)
       );
-
-      this.game.shootAudio.load();
-      this.game.shootAudio.play();
-      this.game.ammo--;
     }
+
+    if (this.powerUp) {
+      this.shootDown();
+    }
+    this.game.shootAudio.load();
+    this.game.shootAudio.play();
+    this.game.ammo--;
+  }
+
+  public shootDown(): void {
+    if (this.game.ammo > 0) {
+      this.projectiles.push(
+        new Projectile(this.game, this.x + 80, this.y + 175)
+      );
+    }
+  }
+
+  public enterPowerUp(): void {
+    this.powerUp = true;
+    this.powerUpTimer = 0;
+    this.game.ammo = this.game.maxAmmo;
   }
 }
 
@@ -554,6 +611,7 @@ class InputHandler {
 }
 
 class Enemy extends Rectangle {
+  public type: string;
   public constructor(game: Game) {
     super(game);
     this.x = this.game.width;
@@ -564,10 +622,11 @@ class Enemy extends Rectangle {
     this.color = this.generateRandomColor();
     this.lives = 2;
     this.score = this.lives;
+    this.type = "";
   }
 
   public update(deltaTime: number): void {
-    this.x += this.speedX;
+    this.x += this.speedX - this.game.speed;
     if (this.x < 0) {
       this.markedForDeletion = true;
     }
@@ -610,8 +669,10 @@ class Angler1 extends Enemy {
     this.width = 228;
     this.height = 169;
     this.image = document.getElementById("angler1") as CanvasImageSource;
+    this.frameY = Math.floor(Math.random() * 3);
     this.maxFrame = 37;
     this.lives = 3;
+    this.score = this.lives;
   }
 }
 
@@ -621,8 +682,10 @@ class Angler2 extends Enemy {
     this.width = 213;
     this.height = 169;
     this.image = document.getElementById("angler2") as CanvasImageSource;
+    this.frameY = Math.floor(Math.random() * 2);
     this.maxFrame = 37;
     this.lives = 3;
+    this.score = this.lives;
   }
 }
 
@@ -632,6 +695,7 @@ class Drone extends Enemy {
     this.width = 115;
     this.height = 95;
     this.image = document.getElementById("drone") as CanvasImageSource;
+    this.frameY = Math.floor(Math.random() * 2);
     this.maxFrame = 37;
     this.lives = 4;
   }
@@ -642,9 +706,12 @@ class Lucky extends Enemy {
     super(game);
     this.width = 99;
     this.height = 95;
-    this.image = document.getElementById("drone") as CanvasImageSource;
+    this.image = document.getElementById("lucky") as CanvasImageSource;
+    this.frameY = Math.floor(Math.random() * 2);
     this.maxFrame = 37;
-    this.lives = 2;
+    this.lives = 1;
+    this.score = 15;
+    this.type = "lucky";
   }
 }
 
@@ -656,6 +723,7 @@ class Hivewhale extends Enemy {
     this.image = document.getElementById("hiveWhale") as CanvasImageSource;
     this.maxFrame = 37;
     this.lives = 6;
+    this.score = this.lives;
   }
 }
 
@@ -729,7 +797,7 @@ class UI {
 
     this.color = "white";
     this.fontSize = 25;
-    this.fontFamily = "Helvetica";
+    this.fontFamily = "Dancing Script";
   }
 
   public draw(context: CanvasRenderingContext2D) {
@@ -739,11 +807,7 @@ class UI {
     context.shadowOffsetY = 2;
     context.shadowColor = "black";
 
-    // ammo
     context.fillStyle = this.color;
-    for (let i = 0; i < this.game.ammo; i++) {
-      context.fillRect(20 + i * 10, 50, 3, 20);
-    }
 
     //score
     context.font = this.fontSize + "px " + this.fontFamily;
@@ -760,25 +824,34 @@ class UI {
       let message2: string;
 
       if (this.game.score > this.game.winningScore) {
-        message1 = "you win";
-        message2 = "well done";
+        message1 = "Most Wondrous!";
+        message2 = "well done explorer!";
       } else {
-        message1 = "You lose";
-        message2 = "Try again next time";
+        message1 = "Blazes!";
+        message2 = "Get my repair kit and try again!";
       }
-      context.font = "50px " + this.fontFamily;
+      context.font = "70px " + this.fontFamily;
       context.fillText(
         message1,
         this.game.width * 0.5,
-        this.game.height * 0.5 - 40
+        this.game.height * 0.5 - 20
       );
 
       context.font = "25px " + this.fontFamily;
       context.fillText(
         message2,
         this.game.width * 0.5,
-        this.game.height * 0.5 + 40
+        this.game.height * 0.5 + 20
       );
+    }
+
+    // draw ammo
+    if (this.game.player.powerUp === true) {
+      context.fillStyle = "#ffffbd";
+    }
+
+    for (let i = 0; i < this.game.ammo; i++) {
+      context.fillRect(20 + i * 10, 50, 3, 20);
     }
 
     context.restore();
@@ -857,4 +930,62 @@ class Background {
   }
 }
 
-class Particle {}
+class Particle extends Rectangle {
+  protected spriteSize: number;
+  protected sizeModifier: number;
+  protected size: number;
+  protected gravity: number;
+  protected angle: number;
+  protected va: number;
+
+  public constructor(game: Game, x: number, y: number) {
+    super(game);
+    this.x = x;
+    this.y = y;
+    this.image = document.getElementById("gears") as CanvasImageSource;
+    this.frameX = Math.floor(Math.random() * 3);
+    this.frameY = Math.floor(Math.random() * 3);
+    this.spriteSize = 50;
+    this.sizeModifier = Math.random() * 0.5 + 0.5;
+    this.size = Math.floor(this.spriteSize * this.sizeModifier);
+    this.speedX = Math.random() * 6 - 3;
+    this.speedY = Math.random() * -15;
+    this.gravity = 0.5;
+    this.markedForDeletion = false;
+
+    this.angle = 0;
+    this.va = Math.random() * 0.2 - 0.1;
+  }
+
+  public update(deltaTime: number): void {
+    this.angle += this.va;
+
+    this.speedY += this.gravity;
+
+    this.x += this.speedX;
+    this.y += this.speedY;
+
+    // if the has to be deleted
+    if (
+      this.y > this.game.height - this.size ||
+      this.x < -this.size ||
+      this.x > this.width - this.size
+    ) {
+      this.markedForDeletion = true;
+    }
+  }
+
+  public draw(context: CanvasRenderingContext2D): void {
+    context.drawImage(
+      this.image,
+      this.frameX * this.size,
+      this.frameY * this.size,
+      this.size,
+      this.size,
+      this.x,
+      this.y,
+      this.size,
+      this.size
+    );
+  }
+}
