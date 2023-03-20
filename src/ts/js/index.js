@@ -233,6 +233,8 @@ class Game extends GameInterface {
                     // play collision sound
                     this.collisionAudio.load();
                     this.collisionAudio.play();
+                    // after projectille hit the enemy the enemy will spill one gear
+                    this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
                     // if enemy don't have lives than mark him for deletion
                     if (enemy.lives <= 0) {
                         enemy.markedForDeletion = true;
@@ -333,10 +335,10 @@ class Game extends GameInterface {
         if (randomNumber > 40 && randomNumber < 60) {
             enemyType = "drone";
         }
-        if (randomNumber > 50 && randomNumber <= 95) {
+        if (randomNumber > 60 && randomNumber <= 80) {
             enemyType = "lucky";
         }
-        if (randomNumber > 95 && randomNumber <= 100) {
+        if (randomNumber > 80 && randomNumber <= 100) {
             enemyType = "hiveWhale";
         }
         console.log(enemyType);
@@ -745,6 +747,7 @@ class Particle extends Rectangle {
     va;
     bounce;
     bottomBounceBoundary;
+    bounceLimit;
     constructor(game, x, y) {
         super(game);
         this.x = x;
@@ -761,8 +764,9 @@ class Particle extends Rectangle {
         this.markedForDeletion = false;
         this.angle = 0;
         this.va = Math.random() * 0.2 - 0.1;
-        this.bounce = false;
-        this.bottomBounceBoundary = 100;
+        this.bounce = 0;
+        this.bounceLimit = 2;
+        this.bottomBounceBoundary = Math.random() * 100 + 60;
     }
     update(deltaTime) {
         this.angle += this.va;
@@ -775,14 +779,21 @@ class Particle extends Rectangle {
             this.x > this.width - this.size) {
             this.markedForDeletion = true;
         }
-        // make the particle bounce 
-        if (!this.bounce && this.y > this.game.height - this.bottomBounceBoundary) {
-            this.bounce = true;
+        // make the particle bounce
+        if (this.bounce < this.bounceLimit &&
+            this.y > this.game.height - this.bottomBounceBoundary) {
+            this.bounce++;
             this.speedY *= -0.5;
         }
     }
     draw(context) {
-        context.drawImage(this.image, this.frameX * this.spriteSize, this.frameY * this.spriteSize, this.spriteSize, this.spriteSize, this.x, this.y, this.size, this.size);
+        context.save();
+        context.translate(this.x, this.y);
+        context.rotate(this.angle);
+        context.drawImage(this.image, this.frameX * this.spriteSize, this.frameY * this.spriteSize, this.spriteSize, this.spriteSize, 0 - this.size * 0.5, // very important
+        0 - this.size * 0.5, // very important
+        this.size, this.size);
+        context.restore();
     }
 }
 //# sourceMappingURL=index.js.map

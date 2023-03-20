@@ -282,8 +282,14 @@ class Game extends GameInterface {
         }
 
         // particles at the position of the collision
-        for(let i = 0; i<enemy.score/2.0; i++) {
-          this.particles.push(new Particle(this, enemy.x+enemy.width*0.5, enemy.y+enemy.height*0.5 ))
+        for (let i = 0; i < enemy.score / 2.0; i++) {
+          this.particles.push(
+            new Particle(
+              this,
+              enemy.x + enemy.width * 0.5,
+              enemy.y + enemy.height * 0.5
+            )
+          );
         }
       }
 
@@ -300,6 +306,15 @@ class Game extends GameInterface {
           // play collision sound
           this.collisionAudio.load();
           this.collisionAudio.play();
+
+          // after projectille hit the enemy the enemy will spill one gear
+          this.particles.push(
+            new Particle(
+              this,
+              enemy.x + enemy.width * 0.5,
+              enemy.y + enemy.height * 0.5
+            )
+          );
 
           // if enemy don't have lives than mark him for deletion
           if (enemy.lives <= 0) {
@@ -318,7 +333,13 @@ class Game extends GameInterface {
 
             // add particles at the place of the collision between the particle and enemy
             for (let i = 0; i < enemy.score; i++) {
-              this.particles.push(new Particle(this, enemy.x+enemy.width*0.5, enemy.y+enemy.height*0.5));
+              this.particles.push(
+                new Particle(
+                  this,
+                  enemy.x + enemy.width * 0.5,
+                  enemy.y + enemy.height * 0.5
+                )
+              );
             }
           }
         }
@@ -432,10 +453,10 @@ class Game extends GameInterface {
       enemyType = "drone";
     }
 
-    if (randomNumber > 50 && randomNumber <= 95) {
+    if (randomNumber > 60 && randomNumber <= 80) {
       enemyType = "lucky";
     }
-    if (randomNumber > 95 && randomNumber <= 100) {
+    if (randomNumber > 80 && randomNumber <= 100) {
       enemyType = "hiveWhale";
     }
 
@@ -960,8 +981,9 @@ class Particle extends Rectangle {
   protected gravity: number;
   protected angle: number;
   protected va: number;
-  protected bounce: boolean;
+  protected bounce: number;
   protected bottomBounceBoundary: number;
+  protected bounceLimit: number;
 
   public constructor(game: Game, x: number, y: number) {
     super(game);
@@ -981,8 +1003,9 @@ class Particle extends Rectangle {
     this.angle = 0;
     this.va = Math.random() * 0.2 - 0.1;
 
-    this.bounce = false;
-    this.bottomBounceBoundary = 100;
+    this.bounce = 0;
+    this.bounceLimit = 2;
+    this.bottomBounceBoundary = Math.random() * 100 + 60;
   }
 
   public update(deltaTime: number): void {
@@ -1002,24 +1025,33 @@ class Particle extends Rectangle {
       this.markedForDeletion = true;
     }
 
-    // make the particle bounce 
-    if (!this.bounce && this.y > this.game.height - this.bottomBounceBoundary)  {
-      this.bounce = true;
+    // make the particle bounce
+    if (
+      this.bounce < this.bounceLimit &&
+      this.y > this.game.height - this.bottomBounceBoundary
+    ) {
+      this.bounce++;
       this.speedY *= -0.5;
     }
   }
 
   public draw(context: CanvasRenderingContext2D): void {
+    context.save();
+
+    context.translate(this.x, this.y);
+    context.rotate(this.angle);
     context.drawImage(
       this.image,
       this.frameX * this.spriteSize,
       this.frameY * this.spriteSize,
       this.spriteSize,
       this.spriteSize,
-      this.x,
-      this.y,
+      0 - this.size * 0.5, // very important
+      0 - this.size * 0.5, // very important
       this.size,
       this.size
     );
+
+    context.restore();
   }
 }
