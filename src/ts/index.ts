@@ -16,8 +16,8 @@ window.addEventListener("load", function () {
     lastTime = timeStamp;
     canvasContext.fillStyle = "lightblue";
     canvasContext.fillRect(0, 0, canvas.width, canvas.height);
-    game.update(deltaTime);
     game.draw(canvasContext);
+    game.update(deltaTime);
     requestAnimationFrame(animate);
   }
 
@@ -34,6 +34,7 @@ class GameInterface {
   public ui: UI;
   public enemies: Enemy[];
   public particles: Particle[];
+  public explosions: Explosion[];
   public input: string[];
 
   public ammo: number;
@@ -180,15 +181,16 @@ class Game extends GameInterface {
     this.background = new Background(this);
     this.ui = new UI(this);
     this.particles = [];
+    this.explosions = [];
     this.enemies = [];
     this.input = [];
     this.ammo = 20;
     this.maxAmmo = 50;
     this.ammoTimer = 0;
-    this.ammoInterval = 500;
+    this.ammoInterval = 350;
 
     this.enemyTimer = 0;
-    this.enemyInterval = 1500;
+    this.enemyInterval = 2000;
     this.maxEnemies = 20;
     this.gameOver = false;
     this.gameStarted = false;
@@ -197,7 +199,7 @@ class Game extends GameInterface {
     this.winningScore = 100;
 
     this.gameTime = 0;
-    this.timeLimit = 600000;
+    this.timeLimit = 30000;
 
     this.speed = 1;
 
@@ -266,7 +268,7 @@ class Game extends GameInterface {
         enemy.markedForDeletion = true;
 
         // decrease the score  of the player
-        this.player.score--;
+        if (!this.gameOver) this.player.score--;
 
         // if player don't have lives than remove player and game over
         //if (this.player.lives <= 0) this.player.markedForDeletion = true;
@@ -291,6 +293,9 @@ class Game extends GameInterface {
             )
           );
         }
+
+        // add explosion at the place of the collision with the player
+        this.addExplosion(enemy);
       }
 
       // verify if each projectile collided with some enemy
@@ -327,9 +332,7 @@ class Game extends GameInterface {
             //increase player score;
             if (!this.gameOver) this.score += enemy.score;
 
-            if (this.score > this.winningScore) {
-              this.gameOver = true;
-            }
+            //if (this.score > this.winningScore) this.gameOver = true;
 
             // add particles at the place of the collision between the particle and enemy
             for (let i = 0; i < enemy.score; i++) {
@@ -341,6 +344,22 @@ class Game extends GameInterface {
                 )
               );
             }
+
+            // add drones inside the hiveWhale
+            if (enemy.type == "hivewhale") {
+              for (let i = 0; i < 4; i += 1) {
+                this.enemies.push(
+                  new Drone(
+                    this,
+                    enemy.x + Math.random() * enemy.width * 0.5,
+                    enemy.y + Math.random() * enemy.height * 0.5
+                  )
+                );
+              }
+            }
+
+            // add explosion at the place of the collision with the projectile
+            this.addExplosion(enemy);
           }
         }
       });
@@ -358,6 +377,15 @@ class Game extends GameInterface {
     this.particles = this.particles.filter(
       (particle: Particle) => !particle.markedForDeletion
     );
+
+    // update explosions
+    this.explosions.forEach((explosion: Explosion) =>
+      explosion.update(deltaTime)
+    );
+    // remove marked for deletion explosions
+    this.explosions = this.explosions.filter(
+      (explosion: Explosion) => !explosion.markedForDeletion
+    );
   }
 
   public draw(context: CanvasRenderingContext2D): void {
@@ -366,20 +394,23 @@ class Game extends GameInterface {
     // draw background
     this.background.draw(context);
 
-    // draw enemies
-    this.enemies.forEach((enemy: Enemy) => enemy.draw(context));
-
-    // draw particles
-    this.particles.forEach((particle: Particle) => particle.draw(context));
+    // draw the UI
+    this.ui.draw(context);
 
     // draw player
     this.player.draw(context);
 
+    // draw particles
+    this.particles.forEach((particle: Particle) => particle.draw(context));
+
+    // draw enemies
+    this.enemies.forEach((enemy: Enemy) => enemy.draw(context));
+
+    //draw explosions
+    this.explosions.forEach((explosion: Explosion) => explosion.draw(context));
+
     // draw front layer
     this.background.layer4.draw(context);
-
-    // draw the UI
-    this.ui.draw(context);
 
     context.restore();
   }
@@ -391,8 +422,6 @@ class Game extends GameInterface {
       this.enemies.push(new Angler1(this));
     } else if (enemyType == "angler2") {
       this.enemies.push(new Angler2(this));
-    } else if (enemyType == "drone") {
-      this.enemies.push(new Drone(this));
     } else if (enemyType == "hiveWhale") {
       this.enemies.push(new Hivewhale(this));
     } else if (enemyType == "lucky") {
@@ -442,27 +471,44 @@ class Game extends GameInterface {
     let enemyType: string;
     let randomNumber: number = Math.random() * 100;
 
-    if (randomNumber >= 0 && randomNumber <= 20) {
+    if (randomNumber >= 0 && randomNumber <= 30) {
       enemyType = "angler1";
     }
-    if (randomNumber > 20 && randomNumber <= 40) {
+    if (randomNumber > 30 && randomNumber <= 60) {
       enemyType = "angler2";
     }
 
-    if (randomNumber > 40 && randomNumber < 60) {
-      enemyType = "drone";
-    }
-
-    if (randomNumber > 60 && randomNumber <= 80) {
+    if (randomNumber > 60 && randomNumber < 90) {
       enemyType = "lucky";
     }
-    if (randomNumber > 80 && randomNumber <= 100) {
+
+    if (randomNumber > 90 && randomNumber <= 100) {
       enemyType = "hiveWhale";
     }
 
-    console.log(enemyType);
-    console.log(this.enemies);
     return enemyType;
+  }
+
+  public addExplosion(enemy: Enemy): void {
+    const randomize: number = Math.random();
+
+    if (randomize < 0.5) {
+      this.explosions.push(
+        new SmokeExplosion(
+          this,
+          enemy.x + enemy.width * 0.5,
+          enemy.y + enemy.height * 0.5
+        )
+      );
+    } else if (randomize > 0.5) {
+      this.explosions.push(
+        new FireExplosion(
+          this,
+          enemy.x + enemy.width * 0.5,
+          enemy.y + enemy.height * 0.5
+        )
+      );
+    }
   }
 }
 
@@ -553,7 +599,7 @@ class Player extends Rectangle {
       } else {
         this.powerUpTimer += deltaTime;
         this.frameY = 1;
-        this.game.ammo += 0.1;
+        if (this.game.ammo < this.game.maxAmmo) this.game.ammo += 0.1;
       }
     }
   }
@@ -586,18 +632,18 @@ class Player extends Rectangle {
   }
 
   public shootTop(): void {
-    if (this.game.ammo > 0) {
+    if (this.game.ammo >= 1) {
       this.projectiles.push(
         new Projectile(this.game, this.x + 80, this.y + 30)
       );
-    }
 
-    if (this.powerUp) {
-      this.shootDown();
+      if (this.powerUp) {
+        this.shootDown();
+      }
+      this.game.shootAudio.load();
+      this.game.shootAudio.play();
+      this.game.ammo--;
     }
-    this.game.shootAudio.load();
-    this.game.shootAudio.play();
-    this.game.ammo--;
   }
 
   public shootDown(): void {
@@ -611,7 +657,9 @@ class Player extends Rectangle {
   public enterPowerUp(): void {
     this.powerUp = true;
     this.powerUpTimer = 0;
-    this.game.ammo = this.game.maxAmmo;
+    if (this.game.ammo < this.game.maxAmmo) {
+      this.game.ammo = this.game.maxAmmo;
+    }
   }
 }
 
@@ -639,9 +687,9 @@ class InputHandler {
 
       if (!this.game.gameStarted) {
         this.game.gameStarted = true;
-        this.game.backgroundAudio.load();
-        this.game.backgroundAudio.play();
-        this.game.backgroundAudio.loop = true;
+        //this.game.backgroundAudio.load();
+        //this.game.backgroundAudio.play();
+        //this.game.backgroundAudio.loop = true;
       }
     });
 
@@ -659,7 +707,7 @@ class Enemy extends Rectangle {
   public constructor(game: Game) {
     super(game);
     this.x = this.game.width;
-    this.y = Math.random() * (this.game.height * 0.8);
+    this.y = Math.random() * (this.game.height * 0.95 - this.height);
     this.speedX = Math.random() * -1.5 - 1;
     this.width = 50;
     this.height = 50;
@@ -713,6 +761,7 @@ class Angler1 extends Enemy {
     this.width = 228;
     this.height = 169;
     this.image = document.getElementById("angler1") as CanvasImageSource;
+    this.y = Math.random() * (this.game.height * 0.95 - this.height);
     this.frameY = Math.floor(Math.random() * 3);
     this.maxFrame = 37;
     this.lives = 3;
@@ -725,6 +774,7 @@ class Angler2 extends Enemy {
     super(game);
     this.width = 213;
     this.height = 169;
+    this.y = Math.random() * (this.game.height * 0.95 - this.height);
     this.image = document.getElementById("angler2") as CanvasImageSource;
     this.frameY = Math.floor(Math.random() * 2);
     this.maxFrame = 37;
@@ -734,14 +784,19 @@ class Angler2 extends Enemy {
 }
 
 class Drone extends Enemy {
-  public constructor(game: Game) {
+  public constructor(game: Game, x: number, y: number) {
     super(game);
+    this.x = x;
+    this.y = y;
     this.width = 115;
     this.height = 95;
+    this.y = Math.random() * (this.game.height * 0.95 - this.height);
+    this.frameX = Math.random() * -4.2 - 0.5;
     this.image = document.getElementById("drone") as CanvasImageSource;
     this.frameY = Math.floor(Math.random() * 2);
     this.maxFrame = 37;
-    this.lives = 4;
+    this.lives = 1;
+    this.score = this.lives;
   }
 }
 
@@ -750,6 +805,7 @@ class Lucky extends Enemy {
     super(game);
     this.width = 99;
     this.height = 95;
+    this.y = Math.random() * (this.game.height * 0.95 - this.height);
     this.image = document.getElementById("lucky") as CanvasImageSource;
     this.frameY = Math.floor(Math.random() * 2);
     this.maxFrame = 37;
@@ -764,10 +820,13 @@ class Hivewhale extends Enemy {
     super(game);
     this.width = 400;
     this.height = 227;
+    this.y = Math.random() * (this.game.height * 0.95 - this.height);
     this.image = document.getElementById("hiveWhale") as CanvasImageSource;
     this.maxFrame = 37;
-    this.lives = 6;
+    this.lives = 15;
     this.score = this.lives;
+    this.speedX = Math.random() * -1.2 - 0.2;
+    this.type = "hivewhale";
   }
 }
 
@@ -1005,7 +1064,7 @@ class Particle extends Rectangle {
 
     this.bounce = 0;
     this.bounceLimit = 2;
-    this.bottomBounceBoundary = Math.random() * 100 + 60;
+    this.bottomBounceBoundary = Math.random() * 80 + 60;
   }
 
   public update(deltaTime: number): void {
@@ -1013,7 +1072,7 @@ class Particle extends Rectangle {
 
     this.speedY += this.gravity;
 
-    this.x += this.speedX;
+    this.x += this.speedX + this.game.speed;
     this.y += this.speedY;
 
     // if the has to be deleted
@@ -1031,7 +1090,7 @@ class Particle extends Rectangle {
       this.y > this.game.height - this.bottomBounceBoundary
     ) {
       this.bounce++;
-      this.speedY *= -0.5;
+      this.speedY *= -0.7;
     }
   }
 
@@ -1053,5 +1112,74 @@ class Particle extends Rectangle {
     );
 
     context.restore();
+  }
+}
+
+class Explosion extends Rectangle {
+  protected spriteHeight: number;
+  protected spriteWidth: number;
+  protected fps: number;
+  protected interval: number;
+  protected timer: number;
+
+  public constructor(game: Game, x: number, y: number) {
+    super(game);
+    this.x = x;
+    this.y = y;
+
+    this.frameX = 0;
+    this.frameY = 0;
+    this.maxFrame = 8;
+    this.spriteHeight = 200;
+    this.timer = 0;
+    this.fps = 30;
+    this.interval = 1000 / this.fps;
+    this.markedForDeletion = false;
+
+    this.spriteWidth = 200;
+    this.width = this.spriteWidth;
+    this.height = this.spriteHeight;
+    this.x = x - this.width * 0.5;
+    this.y = y - this.width * 0.5;
+  }
+
+  public update(deltaTime: number): void {
+    this.x -= this.game.speed;
+    if (this.timer > this.interval) {
+      this.frameX++;
+      this.timer = 0;
+    } else {
+      this.timer += deltaTime;
+    }
+
+    if (this.frameX > this.maxFrame) this.markedForDeletion = true;
+  }
+
+  public draw(context: CanvasRenderingContext2D): void {
+    context.drawImage(
+      this.image,
+      this.frameX * this.spriteWidth,
+      this.frameY,
+      this.spriteWidth,
+      this.spriteHeight,
+      this.x,
+      this.y,
+      this.width,
+      this.height
+    );
+  }
+}
+
+class SmokeExplosion extends Explosion {
+  public constructor(game: Game, x: number, y: number) {
+    super(game, x, y);
+    this.image = document.getElementById("smokeExplosion") as CanvasImageSource;
+  }
+}
+
+class FireExplosion extends Explosion {
+  public constructor(game: Game, x: number, y: number) {
+    super(game, x, y);
+    this.image = document.getElementById("fireExplosion") as CanvasImageSource;
   }
 }
