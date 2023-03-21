@@ -199,7 +199,7 @@ class Game extends GameInterface {
     this.winningScore = 100;
 
     this.gameTime = 0;
-    this.timeLimit = 30000;
+    this.timeLimit = 60000;
 
     this.speed = 1;
 
@@ -482,7 +482,7 @@ class Game extends GameInterface {
       enemyType = "lucky";
     }
 
-    if (randomNumber > 90 && randomNumber <= 100) {
+    if (randomNumber > 80 && randomNumber <= 100) {
       enemyType = "hiveWhale";
     }
 
@@ -687,9 +687,9 @@ class InputHandler {
 
       if (!this.game.gameStarted) {
         this.game.gameStarted = true;
-        //this.game.backgroundAudio.load();
-        //this.game.backgroundAudio.play();
-        //this.game.backgroundAudio.loop = true;
+        this.game.backgroundAudio.load();
+        this.game.backgroundAudio.play();
+        this.game.backgroundAudio.loop = true;
       }
     });
 
@@ -790,7 +790,6 @@ class Drone extends Enemy {
     this.y = y;
     this.width = 115;
     this.height = 95;
-    this.y = Math.random() * (this.game.height * 0.95 - this.height);
     this.frameX = Math.random() * -4.2 - 0.5;
     this.image = document.getElementById("drone") as CanvasImageSource;
     this.frameY = Math.floor(Math.random() * 2);
