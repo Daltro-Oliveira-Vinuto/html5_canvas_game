@@ -60,7 +60,6 @@ class GameInterface {
 
   public playerLife: number;
 
-  public score: number;
   public winningScore: number;
 
   public gameTime: number;
@@ -205,7 +204,6 @@ class Game extends GameInterface {
     this.gameOver = false;
     this.gameStarted = false;
 
-    this.score = 0;
     this.winningScore = 100;
 
     this.gameTime = 0;
@@ -248,9 +246,6 @@ class Game extends GameInterface {
       }
     }
 
-    // update player
-    this.player.update(deltaTime);
-
     //update ammo after 0.5 second;
     if (this.ammoTimer > this.ammoInterval) {
       if (this.ammo < this.maxAmmo) {
@@ -271,6 +266,26 @@ class Game extends GameInterface {
       this.enemyTimer += deltaTime;
     }
 
+    // update player
+    this.player.update(deltaTime);
+
+    // update particles
+    this.particles.forEach((particle: Particle) => particle.update(deltaTime));
+
+    // remove the particles marked for deletion
+    this.particles = this.particles.filter(
+      (particle: Particle) => !particle.markedForDeletion
+    );
+
+    // update explosions
+    this.explosions.forEach((explosion: Explosion) =>
+      explosion.update(deltaTime)
+    );
+    // remove marked for deletion explosions
+    this.explosions = this.explosions.filter(
+      (explosion: Explosion) => !explosion.markedForDeletion
+    );
+
     //update enemies
     this.enemies.forEach((enemy: Enemy) => {
       enemy.update(deltaTime);
@@ -284,10 +299,9 @@ class Game extends GameInterface {
         enemy.markedForDeletion = true;
 
         // decrease the score  of the player
-        if (!this.gameOver) this.player.score--;
+        if (!this.gameOver && enemy.type !== "lucky") this.player.score--;
 
         // if player don't have lives than remove player and game over
-        //if (this.player.lives <= 0) this.player.markedForDeletion = true;
         if (this.player.lives <= 0) this.gameOver = true;
 
         // play collision sound
@@ -314,7 +328,7 @@ class Game extends GameInterface {
         this.addExplosion(enemy);
       }
 
-      // verify if each projectile collided with some enemy
+      // verify if some projectile collided with some enemy
       this.player.projectiles.forEach((projectile) => {
         let collided: boolean = this.checkCollisions(projectile, enemy);
         if (collided) {
@@ -346,11 +360,9 @@ class Game extends GameInterface {
             this.explosionAudio.play();
 
             //increase player score;
-            if (!this.gameOver) this.score += enemy.score;
+            if (!this.gameOver) this.player.score += enemy.score;
 
-            //if (this.score > this.winningScore) this.gameOver = true;
-
-            // add particles at the place of the collision between the particle and enemy
+            // add particles at the place in which the enemy exploded
             for (let i = 0; i < enemy.score; i++) {
               this.particles.push(
                 new Particle(
@@ -359,19 +371,6 @@ class Game extends GameInterface {
                   enemy.y + enemy.height * 0.5
                 )
               );
-            }
-
-            // add drones inside the hiveWhale
-            if (enemy.type == "hivewhale") {
-              for (let i = 0; i < 4; i += 1) {
-                this.enemies.push(
-                  new Drone(
-                    this,
-                    enemy.x + Math.random() * enemy.width * 0.5,
-                    enemy.y + Math.random() * enemy.height * 0.5
-                  )
-                );
-              }
             }
 
             // add explosion at the place of the collision with the projectile
@@ -385,26 +384,10 @@ class Game extends GameInterface {
     this.enemies = this.enemies.filter(
       (enemy: Enemy) => !enemy.markedForDeletion
     );
-
-    // update particles
-    this.particles.forEach((particle: Particle) => particle.update(deltaTime));
-
-    // remove the particles marked for deletion
-    this.particles = this.particles.filter(
-      (particle: Particle) => !particle.markedForDeletion
-    );
-
-    // update explosions
-    this.explosions.forEach((explosion: Explosion) =>
-      explosion.update(deltaTime)
-    );
-    // remove marked for deletion explosions
-    this.explosions = this.explosions.filter(
-      (explosion: Explosion) => !explosion.markedForDeletion
-    );
   }
 
   public draw(context: CanvasRenderingContext2D): void {
+    console.log(this.player.score);
     context.save();
 
     // draw background
@@ -549,6 +532,7 @@ class Player extends Rectangle {
     this.image = document.getElementById("playerImage") as CanvasImageSource;
 
     this.lives = 20;
+    this.score = 0;
 
     this.powerUp = false;
     this.powerUpTimer = 0;
@@ -842,6 +826,21 @@ class Hivewhale extends Enemy {
     this.score = this.lives;
     this.speedX = Math.random() * -1.2 - 0.2;
     this.type = "hivewhale";
+
+    this.addDrones();
+  }
+
+  protected addDrones(): void {
+    // add drones inside the hiveWhale
+    for (let i = 0; i < 4; i += 1) {
+      this.game.enemies.push(
+        new Drone(
+          this.game,
+          this.x + this.width * 0.5 + (Math.random()*(-1.0)+ 0.5)*this.width,
+          this.y + this.height * 0.5 + (Math.random()*(-1.0)*+ 0.5)*this.height
+        )
+      );
+    }
   }
 }
 
@@ -929,7 +928,7 @@ class UI {
 
     //score
     context.font = this.fontSize + "px " + this.fontFamily;
-    context.fillText("Score: " + this.game.score, 20, 40);
+    context.fillText("Score: " + this.game.player.score, 20, 40);
 
     // timer
     const formattedTime: string = (this.game.gameTime * 0.001).toFixed(1);
@@ -941,7 +940,7 @@ class UI {
       let message1: string;
       let message2: string;
 
-      if (this.game.score > this.game.winningScore) {
+      if (this.game.player.score > this.game.winningScore) {
         message1 = "Most Wondrous!";
         message2 = "well done explorer!";
       } else {
