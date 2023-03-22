@@ -199,7 +199,7 @@ class Game extends GameInterface {
     this.ammoInterval = 350;
 
     this.enemyTimer = 0;
-    this.enemyInterval = 2000;
+    this.enemyInterval = 1500;
     this.maxEnemies = 20;
     this.gameOver = false;
     this.gameStarted = false;
@@ -569,7 +569,7 @@ class Player extends Rectangle {
       projectile.update(deltaTime);
     });
 
-    // player remove the projectiles marked for deletion
+    // remove the projectiles marked for deletion
     this.projectiles = this.projectiles.filter(
       (projectile: Projectile) => !projectile.markedForDeletion
     );
@@ -586,8 +586,6 @@ class Player extends Rectangle {
     this.x += this.speedX;
 
     // stops the player from get out of the screen boundaries
-    //if (this.y <= 0 || this.y + this.height >= this.game.height)
-    //  this.y -= this.speedY;
     if (this.x <= 0 || this.x + this.width >= this.game.width)
       this.x -= this.speedX;
 
@@ -690,6 +688,7 @@ class InputHandler {
         this.game.debugMode = !this.game.debugMode;
       }
 
+      // as soon as the game loads and the page receive a event the background music starts
       if (!this.game.gameStarted) {
         this.game.gameStarted = true;
         this.game.backgroundAudio.load();
@@ -883,10 +882,6 @@ class Projectile extends Rectangle {
     } else {
       this.frameX = 0;
       this.frameY += 1;
-    }
-
-    if (this.frameY >= 8) {
-      this.frameY = 0;
     }
   }
 
@@ -1087,7 +1082,7 @@ class Particle extends Rectangle {
     this.x += this.speedX + this.game.speed;
     this.y += this.speedY;
 
-    // if the has to be deleted
+    // check if particles has to be deleted
     if (
       this.y > this.game.height - this.size ||
       this.x < -this.size ||
