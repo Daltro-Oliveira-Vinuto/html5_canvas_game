@@ -155,7 +155,7 @@ class Game extends GameInterface {
         this.ammoTimer = 0;
         this.ammoInterval = 350;
         this.enemyTimer = 0;
-        this.enemyInterval = 2000;
+        this.enemyInterval = 3000;
         this.maxEnemies = 20;
         this.gameOver = false;
         this.gameStarted = false;
@@ -216,6 +216,7 @@ class Game extends GameInterface {
         this.explosions = this.explosions.filter((explosion) => !explosion.markedForDeletion);
         //update enemies
         this.enemies.forEach((enemy) => {
+            //update enemy
             enemy.update(deltaTime);
             // check if some enemy collided with the player
             let collided = this.checkCollisions(this.player, enemy) ||
@@ -223,19 +224,19 @@ class Game extends GameInterface {
             if (collided) {
                 // mark enemy for deletion
                 enemy.markedForDeletion = true;
-                // decrease the score  of the player
+                // decrease the score  of the player if the enemy isn't a lucky fish
                 if (!this.gameOver && enemy.type !== "lucky")
                     this.player.score--;
-                // if player don't have lives than remove player and game over
-                if (this.player.lives <= 0)
-                    this.gameOver = true;
-                // play collision sound
-                this.collisionAudio.load();
-                this.collisionAudio.play();
                 // verify if the enemy was a lucky, if true than active powerUp state
                 if (enemy.type === "lucky") {
                     this.player.enterPowerUp();
                 }
+                // if player don't have lives than game over is true
+                if (this.player.lives <= 0)
+                    this.gameOver = true;
+                // load and play collision sound
+                this.collisionAudio.load();
+                this.collisionAudio.play();
                 // particles at the position of the collision
                 for (let i = 0; i < enemy.score / 2.0; i++) {
                     this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
@@ -249,17 +250,17 @@ class Game extends GameInterface {
                 if (collided) {
                     // marke projectile for deletion
                     projectile.markedForDeletion = true;
-                    // decrease the lives of the enemy
-                    enemy.lives--;
+                    // decrease the lives of the enemy by the projectile damage
+                    enemy.lives -= projectile.damage;
                     // play collision sound
                     this.collisionAudio.load();
                     this.collisionAudio.play();
-                    // after projectille hit the enemy the enemy will spill one gear
+                    // after a projectille hit the enemy the enemy will spill one gear
                     this.particles.push(new Particle(this, enemy.x + enemy.width * 0.5, enemy.y + enemy.height * 0.5));
                     // if enemy don't have lives than mark him for deletion
                     if (enemy.lives <= 0) {
                         enemy.markedForDeletion = true;
-                        // play explosion audio
+                        // load and play explosion audio
                         this.explosionAudio.load();
                         this.explosionAudio.play();
                         //increase player score;
@@ -271,6 +272,10 @@ class Game extends GameInterface {
                         }
                         // add explosion at the place of the collision with the projectile
                         this.addExplosion(enemy);
+                        // if enemy is a hivewhale than add the drones
+                        if (enemy.type == "hivewhale") {
+                            enemy.addChild();
+                        }
                     }
                 }
             });
@@ -279,7 +284,6 @@ class Game extends GameInterface {
         this.enemies = this.enemies.filter((enemy) => !enemy.markedForDeletion);
     }
     draw(context) {
-        console.log(this.player.score);
         context.save();
         // draw background
         this.background.draw(context);
@@ -351,7 +355,7 @@ class Game extends GameInterface {
         if (randomNumber > 60 && randomNumber < 90) {
             enemyType = "lucky";
         }
-        if (randomNumber > 80 && randomNumber <= 100) {
+        if (randomNumber >= 0 && randomNumber <= 100) {
             enemyType = "hiveWhale";
         }
         return enemyType;
@@ -517,6 +521,7 @@ class InputHandler {
 }
 class Enemy extends Rectangle {
     type;
+    totalChilds;
     constructor(game) {
         super(game);
         this.x = this.game.width;
@@ -551,6 +556,7 @@ class Enemy extends Rectangle {
         }
         context.restore();
     }
+    addChild() { }
 }
 class Angler1 extends Enemy {
     constructor(game) {
@@ -585,7 +591,7 @@ class Drone extends Enemy {
         this.y = y;
         this.width = 115;
         this.height = 95;
-        this.frameX = Math.random() * -4.2 - 0.5;
+        this.frameX = Math.random() * -4.0 - 2.0;
         this.image = document.getElementById("drone");
         this.frameY = Math.floor(Math.random() * 2);
         this.maxFrame = 37;
@@ -619,16 +625,17 @@ class Hivewhale extends Enemy {
         this.score = this.lives;
         this.speedX = Math.random() * -1.2 - 0.2;
         this.type = "hivewhale";
-        this.addDrones();
+        this.totalChilds = 1;
     }
-    addDrones() {
+    addChild() {
         // add drones inside the hiveWhale
-        for (let i = 0; i < 4; i += 1) {
-            this.game.enemies.push(new Drone(this.game, this.x + this.width * 0.5 + (Math.random() * (-1.0) + 0.5) * this.width, this.y + this.height * 0.5 + (Math.random() * (-1.0) * +0.5) * this.height));
+        for (let i = 0; i < this.totalChilds; i += 1) {
+            this.game.enemies.push(new Drone(this.game, this.x + this.width * 0.5 + (Math.random() * -1.0 + 0.5) * this.width, this.y + this.height * 0.5 + Math.random() * -1.0 * +0.5 * this.height));
         }
     }
 }
 class Projectile extends Rectangle {
+    damage;
     constructor(game, x, y) {
         super(game);
         this.x = x;
@@ -639,6 +646,7 @@ class Projectile extends Rectangle {
         this.speedX = this.maxSpeedX;
         this.maxFrame = 10;
         this.image = document.getElementById("projectile");
+        this.damage = 1;
     }
     update(deltaTime) {
         this.x += this.speedX;

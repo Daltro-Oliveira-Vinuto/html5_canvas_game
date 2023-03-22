@@ -20,7 +20,11 @@ I copied that game solely for the porpuse of learning to make games in javascrip
     <li>
         I inserted audio using free mp3 files on the internet.
     </li>
-    
+
+    <li>
+        When a hive whale is destroyed by a projectille the object hivewhale call the method addChild to add the drones. Before this change the drones are added directly by the object game in the method update.
+    </li>
+
 </ul>
 
 </h2>
