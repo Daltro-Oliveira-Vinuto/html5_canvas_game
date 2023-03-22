@@ -199,7 +199,7 @@ class Game extends GameInterface {
     this.ammoInterval = 350;
 
     this.enemyTimer = 0;
-    this.enemyInterval = 3000;
+    this.enemyInterval = 2000;
     this.maxEnemies = 20;
     this.gameOver = false;
     this.gameStarted = false;
@@ -486,7 +486,7 @@ class Game extends GameInterface {
       enemyType = "lucky";
     }
 
-    if (randomNumber >= 0 && randomNumber <= 100) {
+    if (randomNumber >= 90 && randomNumber <= 100) {
       enemyType = "hiveWhale";
     }
 
