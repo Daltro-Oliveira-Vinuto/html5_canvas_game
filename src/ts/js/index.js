@@ -3,14 +3,16 @@ window.addEventListener("load", function () {
     canvas.width = 1400;
     canvas.height = 500;
     const canvasContext = canvas.getContext("2d");
+    canvasContext.fillStyle = "";
     const game = new Game(canvas);
     // animation loop
     let lastTime = 0;
     function animate(timeStamp) {
         const deltaTime = timeStamp - lastTime;
         lastTime = timeStamp;
-        canvasContext.fillStyle = "lightblue";
+        // clear the screen
         canvasContext.fillRect(0, 0, canvas.width, canvas.height);
+        // call object game
         game.draw(canvasContext);
         game.update(deltaTime);
         requestAnimationFrame(animate);
@@ -28,7 +30,7 @@ class GameInterface {
     enemies;
     particles;
     explosions;
-    input;
+    inputs;
     ammo;
     maxAmmo;
     ammoTimer;
@@ -68,6 +70,11 @@ class Rectangle {
     game;
     _lives;
     _score;
+    spriteHeight;
+    spriteWidth;
+    fps;
+    interval;
+    timer;
     constructor(game) {
         this.game = game;
     }
@@ -139,12 +146,11 @@ class Game extends GameInterface {
         this.height = canvas.height;
         this.player = new Player(this);
         this.inputHandler = new InputHandler(this);
-        this.background = new Background(this);
         this.ui = new UI(this);
         this.particles = [];
         this.explosions = [];
         this.enemies = [];
-        this.input = [];
+        this.inputs = [];
         this.ammo = 20;
         this.maxAmmo = 50;
         this.ammoTimer = 0;
@@ -164,11 +170,16 @@ class Game extends GameInterface {
         this.explosionAudio = document.getElementById("explosionSound");
         this.shootAudio = document.getElementById("shootSound");
         this.playerLife = 20;
+        this.background = new Background(this);
+        this.background.addLayer("layer1", 0.1);
+        this.background.addLayer("layer2", 0.3);
+        this.background.addLayer("layer3", 1);
+        this.background.addLayer("layer4", 1.5);
     }
     update(deltaTime) {
         // update background
         this.background.update(deltaTime);
-        this.background.layer4.update(deltaTime);
+        // verify if the time has ended
         if (!this.gameOver) {
             this.gameTime += deltaTime;
             if (this.gameTime > this.timeLimit) {
@@ -265,9 +276,9 @@ class Game extends GameInterface {
                     }
                 }
             });
-            // remove the marked for deletion enemies
-            this.enemies = this.enemies.filter((enemy) => !enemy.markedForDeletion);
         });
+        // remove the marked for deletion enemies
+        this.enemies = this.enemies.filter((enemy) => !enemy.markedForDeletion);
         // update particles
         this.particles.forEach((particle) => particle.update(deltaTime));
         // remove the particles marked for deletion
@@ -292,7 +303,7 @@ class Game extends GameInterface {
         //draw explosions
         this.explosions.forEach((explosion) => explosion.draw(context));
         // draw front layer
-        this.background.layer4.draw(context);
+        this.background.layers[3].draw(context);
         context.restore();
     }
     addEnemy() {
@@ -387,20 +398,20 @@ class Player extends Rectangle {
     }
     update(deltaTime) {
         // handles motion of the player
-        if (this.game.input.includes("ArrowUp"))
+        if (this.game.inputs.includes("ArrowUp"))
             this.speedY = -this.maxSpeedY;
-        if (this.game.input.includes("ArrowDown"))
+        if (this.game.inputs.includes("ArrowDown"))
             this.speedY = +this.maxSpeedY;
-        if (!this.game.input.includes("ArrowUp") &&
-            !this.game.input.includes("ArrowDown")) {
+        if (!this.game.inputs.includes("ArrowUp") &&
+            !this.game.inputs.includes("ArrowDown")) {
             this.speedY = 0;
         }
-        if (this.game.input.includes("ArrowLeft"))
+        if (this.game.inputs.includes("ArrowLeft"))
             this.speedX = -this.maxSpeedX;
-        if (this.game.input.includes("ArrowRight"))
+        if (this.game.inputs.includes("ArrowRight"))
             this.speedX = this.maxSpeedX;
-        if (!this.game.input.includes("ArrowLeft") &&
-            !this.game.input.includes("ArrowRight")) {
+        if (!this.game.inputs.includes("ArrowLeft") &&
+            !this.game.inputs.includes("ArrowRight")) {
             this.speedX = 0;
         }
         // update the projectiles
@@ -488,8 +499,8 @@ class InputHandler {
                 event.key === "ArrowUp" ||
                 event.key == "ArrowLeft" ||
                 event.key == "ArrowRight") &&
-                this.game.input.indexOf(event.key) == -1) {
-                this.game.input.push(event.key);
+                this.game.inputs.indexOf(event.key) == -1) {
+                this.game.inputs.push(event.key);
             }
             else if (event.key === " ") {
                 this.game.player.shootTop();
@@ -505,9 +516,9 @@ class InputHandler {
             }
         });
         document.addEventListener("keyup", (event) => {
-            let index = this.game.input.indexOf(event.key);
+            let index = this.game.inputs.indexOf(event.key);
             if (index !== -1) {
-                this.game.input.splice(index, 1);
+                this.game.inputs.splice(index, 1);
             }
         });
     }
@@ -726,7 +737,6 @@ class Layer extends Rectangle {
         this.speedModifier = speedModifier;
         this.width = this.game.width;
         this.height = this.game.height;
-        //this.height = this.game.height;
     }
     update(deltaTime) {
         if (this.x <= -this.width)
@@ -740,33 +750,20 @@ class Layer extends Rectangle {
 }
 class Background {
     game;
-    image1;
-    image2;
-    image3;
-    image4;
-    layer1;
-    layer2;
-    layer3;
-    layer4;
     layers;
     constructor(game) {
         this.game = game;
-        this.image1 = document.getElementById("layer1");
-        this.image2 = document.getElementById("layer2");
-        this.image3 = document.getElementById("layer3");
-        this.image4 = document.getElementById("layer4");
-        this.layer1 = new Layer(this.game, this.image1, 0.1);
-        this.layer2 = new Layer(this.game, this.image2, 0.3);
-        this.layer3 = new Layer(this.game, this.image3, 1);
-        this.layer4 = new Layer(this.game, this.image4, 1.5);
         this.layers = [];
-        this.layers.push(this.layer1, this.layer2, this.layer3);
     }
     update(deltaTime) {
         this.layers.forEach((layer) => layer.update(deltaTime));
     }
     draw(context) {
         this.layers.forEach((layer) => layer.draw(context));
+    }
+    addLayer(imageID, speedModifier) {
+        var image = document.getElementById(imageID);
+        this.layers.push(new Layer(this.game, image, speedModifier));
     }
 }
 class Particle extends Rectangle {
@@ -828,11 +825,6 @@ class Particle extends Rectangle {
     }
 }
 class Explosion extends Rectangle {
-    spriteHeight;
-    spriteWidth;
-    fps;
-    interval;
-    timer;
     constructor(game, x, y) {
         super(game);
         this.x = x;

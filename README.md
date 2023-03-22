@@ -15,7 +15,7 @@ I copied that game solely for the porpuse of learning to make games in javascrip
         I changed the original code from Javascript to his superset Typescript.
     </li>
     <li>
-        I changed the code to be more clear to me and to be more readable by adding comentaries and changing some classes. 
+        I changed the code to be more clear to me and to be more readable by adding comentaries and changing some classes. For example, before the layers were added inside the constructor of the background object then a created a method called addLayer that receive the ID of image and than create a new layer and add to the layers array of the background object.
     </li>
     <li>
         I inserted audio using free mp3 files on the internet.
